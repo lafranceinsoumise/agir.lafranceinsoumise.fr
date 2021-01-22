@@ -5,7 +5,10 @@ from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet, GenericViewSet
 
+from agir.events.models import Event
+from agir.events.serializers import EventSerializer
 from agir.groups.filters import GroupAPIFilterSet
 from agir.groups.models import SupportGroup, SupportGroupSubtype
 from agir.groups.serializers import (
@@ -14,8 +17,6 @@ from agir.groups.serializers import (
     SupportGroupSerializer,
     SupportGroupDetailSerializer,
 )
-from agir.events.models import Event
-from agir.events.serializers import EventSerializer
 from agir.lib.pagination import APIPaginator
 
 __all__ = [
@@ -29,6 +30,9 @@ __all__ = [
     "GroupUpcomingEventsAPIView",
     "GroupPastEventReportsAPIView",
 ]
+
+from agir.msgs.models import SupportGroupMessage
+from agir.msgs.serializers import MessageSerializer
 
 
 class GroupSearchAPIView(ListAPIView):
@@ -209,3 +213,16 @@ class GroupPastEventReportsAPIView(ListAPIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         return super().dispatch(request, *args, **kwargs)
+
+
+class GroupMessagesViewSet(GenericViewSet):
+    serializer_class = MessageSerializer
+
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            self.supportgroup = SupportGroup.objects.get(pk=request.kwargs["group_pk"])
+        except SupportGroup.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+    def get_queryset(self):
+        return self.supportgroup.messages.all()
